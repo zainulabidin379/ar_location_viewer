@@ -26,7 +26,7 @@ class ArViewer extends StatefulWidget {
     this.showDebugInfoSensor = true,
     this.paddingOverlap = 5,
     this.yOffsetOverlap,
-    this.tooFarAnnotationsMessage = 'No annotations visible',
+    this.tooFarAnnotationsMessage,
     required this.minDistanceReload,
     this.cameraController,
   });
@@ -48,7 +48,7 @@ class ArViewer extends StatefulWidget {
   final double? yOffsetOverlap;
   final double minDistanceReload;
   final CameraController? cameraController;
-  final String tooFarAnnotationsMessage;
+  final String? tooFarAnnotationsMessage;
 
   @override
   State<ArViewer> createState() => _ArViewerState();
@@ -91,14 +91,6 @@ class _ArViewerState extends State<ArViewer> {
                 widget.annotations, arSensor, deviceLocation);
             _transformAnnotation(annotations);
 
-            // Check if annotations are empty and handle the case
-            var showAnnotationTooFar = false;
-            if (annotations.isEmpty) {
-              if (widget.annotations.isEmpty == false) {
-                showAnnotationTooFar = true;
-              }
-            }
-
             return Stack(
               children: [
                 if (kDebugMode && widget.showDebugInfoSensor)
@@ -123,7 +115,7 @@ class _ArViewerState extends State<ArViewer> {
                     );
                   },
                 ).toList()),
-                if (showAnnotationTooFar)
+                if (widget.tooFarAnnotationsMessage != null)
                   Center(
                     child: Card(
                       color: Colors.white,
@@ -135,7 +127,7 @@ class _ArViewerState extends State<ArViewer> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 24, vertical: 16),
                         child: Text(
-                          widget.tooFarAnnotationsMessage,
+                          widget.tooFarAnnotationsMessage!,
                           style: const TextStyle(
                             fontSize: 16,
                             color: Colors.black87,
