@@ -131,7 +131,7 @@ class _ArViewerState extends State<ArViewer> {
                   (e) {
                     return Positioned(
                       left: e.arPosition.dx,
-                      top: e.arPosition.dy + height * 0.5,
+                      top: e.arPosition.dy + height * 0.3,
                       child: Transform.scale(
                         scale:
                             widget.scaleWithDistance ? 1 - (e.distanceFromUser / (widget.maxVisibleDistance + 280)) : 1,
@@ -248,47 +248,47 @@ class _ArViewerState extends State<ArViewer> {
     double hFov = 0;
     double vFov = 0;
 
-    // FOV più realistico basato su dispositivi tipici
-    // iPhone: ~65° orizzontale, Android varia da 60-75°
+    // More realistic FOV based on typical devices
+    // iPhone: ~65° horizontal, Android varies from 60-75°
     double baseFOv = 65.0;
 
-    // Se disponibile, usa i dati reali della fotocamera
+    // If available, use real camera data
     if (widget.cameraController != null && widget.cameraController!.value.isInitialized) {
       try {
-        // Prova ad ottenere FOV reale se disponibile nel futuro
-        // Per ora usa valori più precisi basati sulla risoluzione
+        // Try to get real FOV if available in the future
+        // For now, use more precise values based on resolution
         final previewSize = widget.cameraController!.value.previewSize!;
 
-        // Considera l'orientamento per calcolare l'aspect ratio corretto
+        // Consider the orientation to calculate the correct aspect ratio
         double aspectRatio;
         if (orientation == NativeDeviceOrientation.landscapeLeft ||
             orientation == NativeDeviceOrientation.landscapeRight) {
-          // In landscape, inverti le dimensioni del preview
+          // In landscape, invert the preview dimensions
           aspectRatio = previewSize.height / previewSize.width;
         } else {
-          // In portrait, usa le dimensioni normali
+          // In portrait, use the normal dimensions
           aspectRatio = previewSize.width / previewSize.height;
         }
 
-        // Adatta il FOV in base all'aspect ratio della fotocamera
-        baseFOv = 60.0 + (aspectRatio - 0.75) * 20.0; // Adattamento dinamico
-        baseFOv = baseFOv.clamp(55.0, 75.0); // Limita a valori ragionevoli
+        // Adjust the FOV based on the camera's aspect ratio
+        baseFOv = 60.0 + (aspectRatio - 0.75) * 20.0; // Dynamic adjustment
+        baseFOv = baseFOv.clamp(55.0, 75.0); // Limit to reasonable values
       } catch (e) {
-        // Fallback ai valori di default
+        // Fallback to default values
         baseFOv = 65.0;
       }
     }
 
-    // Calcola l'aspect ratio dello schermo attuale
+    // Calculate the current screen aspect ratio
     final screenAspectRatio = width / height;
 
     if (orientation == NativeDeviceOrientation.landscapeLeft || orientation == NativeDeviceOrientation.landscapeRight) {
       hFov = baseFOv;
-      // Calcola vFov basato sull'aspect ratio reale dello schermo
+      // Calculate vFov based on the actual screen aspect ratio
       vFov = (2 * atan(tan((hFov / 2).toRadians) / screenAspectRatio)).toDegrees;
     } else {
-      // In modalità portrait, il FOV verticale è tipicamente minore
-      vFov = baseFOv * 0.75; // Ridotto per modalità portrait
+      // In portrait mode, the vertical FOV is typically smaller
+      vFov = baseFOv * 0.75; // Reduced for portrait mode
       hFov = (2 * atan(tan((vFov / 2).toRadians) * screenAspectRatio)).toDegrees;
     }
 
@@ -317,11 +317,11 @@ class _ArViewerState extends State<ArViewer> {
       e.distanceFromUser = Geolocator.distanceBetween(
           deviceLocation.latitude, deviceLocation.longitude, annotationLocation.latitude, annotationLocation.longitude);
 
-      // Miglioramento: correggi la distorsione agli estremi del FOV
+      // Improvement: correct lens distortion at FOV edges
       final deltaAngle = ArMath.deltaAngle(e.azimuth, arSensor.heading);
       final normalizedAngle = deltaAngle / (arStatus.hFov / 2);
 
-      // Applica una correzione per la distorsione delle lenti
+      // Apply lens distortion correction
       final correctedDeltaAngle = deltaAngle * (1.0 + 0.1 * normalizedAngle * normalizedAngle);
 
       final dy = arSensor.pitch * arStatus.vPixelPerDegree;
