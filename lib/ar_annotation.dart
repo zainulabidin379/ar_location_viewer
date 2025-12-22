@@ -5,6 +5,7 @@ abstract class ArAnnotation {
   ArAnnotation({
     required this.uid,
     required this.position,
+    required this.color,
     this.azimuth = 0,
     this.distanceFromUser = 0,
     this.isVisible = false,
@@ -19,6 +20,7 @@ abstract class ArAnnotation {
   bool isVisible;
   Offset arPosition;
   Offset arPositionOffset;
+  Color color;
 
   @override
   String toString() {

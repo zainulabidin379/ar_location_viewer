@@ -1,3 +1,4 @@
+import 'package:ar_location_viewer/ar_radar.dart';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 
@@ -18,7 +19,13 @@ class ArLocationWidget extends StatefulWidget {
     this.yOffsetOverlap,
     this.accessory,
     this.minDistanceReload = 50,
-    this.tooFarAnnotationsMessage = 'No annotations visible',
+    this.scaleWithDistance = true,
+    this.markerColor,
+    this.radarColor,
+    this.backgroundRadar,
+    this.radarPosition,
+    this.showRadar = true,
+    this.radarWidth,
   });
 
   ///List of POIs
@@ -57,8 +64,26 @@ class ArLocationWidget extends StatefulWidget {
   ///Min distance reload
   final double minDistanceReload;
 
-  ///Message when annotations are too far
-  final String tooFarAnnotationsMessage;
+  ///Scale annotation view with distance from user
+  final bool scaleWithDistance;
+
+  /// marker color in radar
+  final Color? markerColor;
+
+  ///radar color
+  final Color? radarColor;
+
+  ///background radar color
+  final Color? backgroundRadar;
+
+  ///radar position in view
+  final RadarPosition? radarPosition;
+
+  ///Show radar in view
+  final bool showRadar;
+
+  ///Radar width
+  final double? radarWidth;
 
   @override
   State<ArLocationWidget> createState() => _ArLocationWidgetState();
@@ -98,10 +123,15 @@ class _ArLocationWidgetState extends State<ArLocationWidget> {
             paddingOverlap: widget.paddingOverlap,
             yOffsetOverlap: widget.yOffsetOverlap,
             minDistanceReload: widget.minDistanceReload,
-            cameraController: cameraController,
-            tooFarAnnotationsMessage: widget.tooFarAnnotationsMessage,
+            scaleWithDistance: widget.scaleWithDistance,
+            markerColor: widget.markerColor,
+            radarColor: widget.radarColor,
+            backgroundRadar: widget.backgroundRadar,
+            radarPosition: widget.radarPosition,
+            showRadar: widget.showRadar,
+            radarWidth: widget.radarWidth,
           ),
-        if (widget.accessory != null) widget.accessory!
+        if (initCam && widget.accessory != null) widget.accessory!
       ],
     );
   }

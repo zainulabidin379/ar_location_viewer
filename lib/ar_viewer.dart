@@ -1,15 +1,16 @@
 import 'dart:math';
+
+import 'package:ar_location_viewer/ar_radar.dart';
+import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:native_device_orientation/native_device_orientation.dart';
-import 'package:camera/camera.dart';
 
 import 'ar_location_viewer.dart';
 
 /// Signature for a function that creates a widget for a given annotation,
-typedef AnnotationViewerBuilder = Widget Function(
-    BuildContext context, ArAnnotation annotation);
+typedef AnnotationViewerBuilder = Widget Function(BuildContext context, ArAnnotation annotation);
 
 typedef ChangeLocationCallback = void Function(Position position);
 
@@ -26,9 +27,15 @@ class ArViewer extends StatefulWidget {
     this.showDebugInfoSensor = true,
     this.paddingOverlap = 5,
     this.yOffsetOverlap,
-    this.tooFarAnnotationsMessage,
     required this.minDistanceReload,
     this.cameraController,
+    this.scaleWithDistance = true,
+    this.markerColor,
+    this.radarColor,
+    this.backgroundRadar,
+    this.radarPosition,
+    this.showRadar = true,
+    this.radarWidth,
   });
 
   final List<ArAnnotation> annotations;
@@ -48,7 +55,29 @@ class ArViewer extends StatefulWidget {
   final double? yOffsetOverlap;
   final double minDistanceReload;
   final CameraController? cameraController;
-  final String? tooFarAnnotationsMessage;
+
+  ///Scale annotation view with distance from user
+  final bool scaleWithDistance;
+
+  ///Radar
+
+  /// marker color in radar
+  final Color? markerColor;
+
+  ///background radar color
+  final Color? backgroundRadar;
+
+  ///radar color
+  final Color? radarColor;
+
+  ///radar position in view
+  final RadarPosition? radarPosition;
+
+  ///Show radar in view
+  final bool showRadar;
+
+  ///Radar width
+  final double? radarWidth;
 
   @override
   State<ArViewer> createState() => _ArViewerState();
@@ -87,8 +116,7 @@ class _ArViewerState extends State<ArViewer> {
             _calculateFOV(arSensor.orientation, width, height);
             _updatePosition(arSensor.location!);
             final deviceLocation = arSensor.location!;
-            final annotations = _filterAndSortArAnnotation(
-                widget.annotations, arSensor, deviceLocation);
+            final annotations = _filterAndSortArAnnotation(widget.annotations, arSensor, deviceLocation);
             _transformAnnotation(annotations);
 
             return Stack(
@@ -104,8 +132,9 @@ class _ArViewerState extends State<ArViewer> {
                     return Positioned(
                       left: e.arPosition.dx,
                       top: e.arPosition.dy + height * 0.5,
-                      child: Transform.translate(
-                        offset: Offset(0, e.arPositionOffset.dy),
+                      child: Transform.scale(
+                        scale:
+                            widget.scaleWithDistance ? 1 - (e.distanceFromUser / (widget.maxVisibleDistance + 280)) : 1,
                         child: SizedBox(
                           width: widget.annotationWidth,
                           height: widget.annotationHeight,
@@ -115,28 +144,9 @@ class _ArViewerState extends State<ArViewer> {
                     );
                   },
                 ).toList()),
-                if (widget.tooFarAnnotationsMessage != null)
-                  Center(
-                    child: Card(
-                      color: Colors.white,
-                      elevation: 4,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 24, vertical: 16),
-                        child: Text(
-                          widget.tooFarAnnotationsMessage!,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            color: Colors.black87,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    ),
-                  ),
+                if (widget.showRadar)
+                  _radarPosition(context, widget.radarPosition ?? RadarPosition.bottomCenter, arSensor.heading,
+                      widget.radarWidth != null ? (widget.radarWidth! * 2) : width)
               ],
             );
           }
@@ -144,6 +154,59 @@ class _ArViewerState extends State<ArViewer> {
         return loading();
       },
     );
+  }
+
+  Widget _radarPosition(BuildContext context, RadarPosition position, double heading, double width) {
+    final radar = CustomPaint(
+      size: Size(width / 2, width / 2),
+      painter: RadarPainter(
+        maxDistance: widget.maxVisibleDistance,
+        arAnnotations: widget.annotations,
+        heading: heading,
+        background: widget.backgroundRadar ?? Colors.grey,
+        radarColor: widget.radarColor ?? Colors.blue,
+      ),
+    );
+    return Positioned(
+      bottom: MediaQuery.of(context).viewPadding.bottom,
+      left: 0,
+      right: 0,
+      child: radar,
+    );
+    // switch (position) {
+    //   case RadarPosition.topCenter:
+    //     return Positioned(
+    //       top: 0,
+    //       left: screenWidth / 2 - width / 4,
+    //       child: radar,
+    //     );
+    //   case RadarPosition.topRight:
+    //     return Positioned(
+    //       top: 0,
+    //       right: 0,
+    //       child: radar,
+    //     );
+    //   case RadarPosition.bottomLeft:
+    //     return Positioned(
+    //       bottom: 0,
+    //       left: 0,
+    //       child: radar,
+    //     );
+    //   case RadarPosition.bottomCenter:
+    //     return Positioned(
+    //       bottom: 0,
+    //       left: screenWidth / 2 - width / 4,
+    //       child: radar,
+    //     );
+    //   case RadarPosition.bottomRight:
+    //     return Positioned(
+    //       bottom: 0,
+    //       right: 0,
+    //       child: radar,
+    //     );
+    //   default:
+    //     return radar;
+    // }
   }
 
   Widget debugInfo(BuildContext context, ArSensor? arSensor) {
@@ -164,8 +227,7 @@ class _ArViewerState extends State<ArViewer> {
                 style: const TextStyle(
                   color: Colors.black,
                 )),
-            Text('Pitch     : ${arSensor?.pitch}',
-                style: const TextStyle(color: Colors.black)),
+            Text('Pitch     : ${arSensor?.pitch}', style: const TextStyle(color: Colors.black)),
             Text('Heading   : ${arSensor?.heading}',
                 style: const TextStyle(
                   color: Colors.black,
@@ -182,8 +244,7 @@ class _ArViewerState extends State<ArViewer> {
     );
   }
 
-  void _calculateFOV(
-      NativeDeviceOrientation orientation, double width, double height) {
+  void _calculateFOV(NativeDeviceOrientation orientation, double width, double height) {
     double hFov = 0;
     double vFov = 0;
 
@@ -192,8 +253,7 @@ class _ArViewerState extends State<ArViewer> {
     double baseFOv = 65.0;
 
     // Se disponibile, usa i dati reali della fotocamera
-    if (widget.cameraController != null &&
-        widget.cameraController!.value.isInitialized) {
+    if (widget.cameraController != null && widget.cameraController!.value.isInitialized) {
       try {
         // Prova ad ottenere FOV reale se disponibile nel futuro
         // Per ora usa valori più precisi basati sulla risoluzione
@@ -222,17 +282,14 @@ class _ArViewerState extends State<ArViewer> {
     // Calcola l'aspect ratio dello schermo attuale
     final screenAspectRatio = width / height;
 
-    if (orientation == NativeDeviceOrientation.landscapeLeft ||
-        orientation == NativeDeviceOrientation.landscapeRight) {
+    if (orientation == NativeDeviceOrientation.landscapeLeft || orientation == NativeDeviceOrientation.landscapeRight) {
       hFov = baseFOv;
       // Calcola vFov basato sull'aspect ratio reale dello schermo
-      vFov =
-          (2 * atan(tan((hFov / 2).toRadians) / screenAspectRatio)).toDegrees;
+      vFov = (2 * atan(tan((hFov / 2).toRadians) / screenAspectRatio)).toDegrees;
     } else {
       // In modalità portrait, il FOV verticale è tipicamente minore
       vFov = baseFOv * 0.75; // Ridotto per modalità portrait
-      hFov =
-          (2 * atan(tan((vFov / 2).toRadians) * screenAspectRatio)).toDegrees;
+      hFov = (2 * atan(tan((vFov / 2).toRadians) * screenAspectRatio)).toDegrees;
     }
 
     arStatus.hFov = hFov;
@@ -241,8 +298,7 @@ class _ArViewerState extends State<ArViewer> {
     arStatus.vPixelPerDegree = vFov > 0 ? (height / vFov) : 0;
   }
 
-  List<ArAnnotation> _visibleAnnotations(
-      List<ArAnnotation> annotations, double heading) {
+  List<ArAnnotation> _visibleAnnotations(List<ArAnnotation> annotations, double heading) {
     final degreesDeltaH = arStatus.hFov;
     return annotations.where((ArAnnotation annotation) {
       final delta = ArMath.deltaAngle(heading, annotation.azimuth);
@@ -253,29 +309,20 @@ class _ArViewerState extends State<ArViewer> {
   }
 
   List<ArAnnotation> _calculateDistanceAndBearingFromUser(
-      List<ArAnnotation> annotations,
-      Position deviceLocation,
-      ArSensor arSensor) {
+      List<ArAnnotation> annotations, Position deviceLocation, ArSensor arSensor) {
     return annotations.map((e) {
       final annotationLocation = e.position;
       e.azimuth = Geolocator.bearingBetween(
-          deviceLocation.latitude,
-          deviceLocation.longitude,
-          annotationLocation.latitude,
-          annotationLocation.longitude);
+          deviceLocation.latitude, deviceLocation.longitude, annotationLocation.latitude, annotationLocation.longitude);
       e.distanceFromUser = Geolocator.distanceBetween(
-          deviceLocation.latitude,
-          deviceLocation.longitude,
-          annotationLocation.latitude,
-          annotationLocation.longitude);
+          deviceLocation.latitude, deviceLocation.longitude, annotationLocation.latitude, annotationLocation.longitude);
 
       // Miglioramento: correggi la distorsione agli estremi del FOV
       final deltaAngle = ArMath.deltaAngle(e.azimuth, arSensor.heading);
       final normalizedAngle = deltaAngle / (arStatus.hFov / 2);
 
       // Applica una correzione per la distorsione delle lenti
-      final correctedDeltaAngle =
-          deltaAngle * (1.0 + 0.1 * normalizedAngle * normalizedAngle);
+      final correctedDeltaAngle = deltaAngle * (1.0 + 0.1 * normalizedAngle * normalizedAngle);
 
       final dy = arSensor.pitch * arStatus.vPixelPerDegree;
       final dx = correctedDeltaAngle * arStatus.hPixelPerDegree;
@@ -285,22 +332,17 @@ class _ArViewerState extends State<ArViewer> {
     }).toList();
   }
 
-  List<ArAnnotation> _filterAndSortArAnnotation(List<ArAnnotation> annotations,
-      ArSensor arSensor, Position deviceLocation) {
-    List<ArAnnotation> temps = _calculateDistanceAndBearingFromUser(
-        annotations, deviceLocation, arSensor);
-    temps = annotations
-        .where(
-            (element) => element.distanceFromUser < widget.maxVisibleDistance)
-        .toList();
+  List<ArAnnotation> _filterAndSortArAnnotation(
+      List<ArAnnotation> annotations, ArSensor arSensor, Position deviceLocation) {
+    List<ArAnnotation> temps = _calculateDistanceAndBearingFromUser(annotations, deviceLocation, arSensor);
+    temps = annotations.where((element) => element.distanceFromUser < widget.maxVisibleDistance).toList();
     temps = _visibleAnnotations(temps, arSensor.heading);
     return temps;
   }
 
   void _transformAnnotation(List<ArAnnotation> annotations) {
-    annotations.sort((a, b) => (a.distanceFromUser < b.distanceFromUser)
-        ? -1
-        : ((a.distanceFromUser > b.distanceFromUser) ? 1 : 0));
+    annotations.sort(
+        (a, b) => (a.distanceFromUser < b.distanceFromUser) ? -1 : ((a.distanceFromUser > b.distanceFromUser) ? 1 : 0));
 
     for (final ArAnnotation annotation in annotations) {
       var i = 0;
@@ -309,22 +351,19 @@ class _ArViewerState extends State<ArViewer> {
         if (annotation.uid == annotation2.uid) {
           break;
         }
-        final collision =
-            intersects(annotation, annotation2, widget.annotationWidth);
+        final collision = intersects(annotation, annotation2, widget.annotationWidth);
         if (collision) {
           annotation.arPositionOffset = Offset(
               0,
               annotation2.arPositionOffset.dy -
-                  ((widget.yOffsetOverlap ?? widget.annotationHeight) +
-                      widget.paddingOverlap));
+                  ((widget.yOffsetOverlap ?? widget.annotationHeight) + widget.paddingOverlap));
         }
         i++;
       }
     }
   }
 
-  bool intersects(
-      ArAnnotation annotation1, ArAnnotation annotation2, double width) {
+  bool intersects(ArAnnotation annotation1, ArAnnotation annotation2, double width) {
     return (annotation2.arPosition.dx >= annotation1.arPosition.dx &&
             annotation2.arPosition.dx <= (annotation1.arPosition.dx + width)) ||
         (annotation1.arPosition.dx >= annotation2.arPosition.dx &&
@@ -336,8 +375,8 @@ class _ArViewerState extends State<ArViewer> {
       widget.onLocationChange(newPosition);
       position = newPosition;
     } else {
-      final distance = Geolocator.distanceBetween(position!.latitude,
-          position!.longitude, newPosition.latitude, newPosition.longitude);
+      final distance = Geolocator.distanceBetween(
+          position!.latitude, position!.longitude, newPosition.latitude, newPosition.longitude);
       if (distance > widget.minDistanceReload) {
         widget.onLocationChange(newPosition);
         widget.onLocationChange(newPosition);
