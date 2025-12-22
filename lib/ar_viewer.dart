@@ -131,7 +131,7 @@ class _ArViewerState extends State<ArViewer> {
                   (e) {
                     return Positioned(
                       left: e.arPosition.dx,
-                      top: e.arPosition.dy + height * 0.3,
+                      top: e.arPosition.dy + height * 0.35,
                       child: Transform.scale(
                         scale:
                             widget.scaleWithDistance ? 1 - (e.distanceFromUser / (widget.maxVisibleDistance + 280)) : 1,
