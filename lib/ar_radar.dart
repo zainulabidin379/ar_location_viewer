@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
@@ -20,6 +21,7 @@ class RadarPainter extends CustomPainter {
     required this.heading,
     required this.background,
     required this.radarColor,
+    required this.pinImage,
   });
 
   final angle = pi / 7;
@@ -29,6 +31,7 @@ class RadarPainter extends CustomPainter {
   final double maxDistance;
   final List<ArAnnotation> arAnnotations;
   final double heading;
+  final ui.Image pinImage;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -73,7 +76,13 @@ class RadarPainter extends CustomPainter {
       final dx = (distanceInRadar) * sin(alpha);
       final dy = (distanceInRadar) * cos(alpha);
       final center = Offset(dx + radius, dy + radius);
-      canvas.drawCircle(center, 3, paint);
+      final imageWidth = pinImage.width.toDouble();
+      final imageHeight = pinImage.height.toDouble();
+      final drawOffset = Offset(
+        center.dx - imageWidth / 2,
+        center.dy - imageHeight,
+      );
+      canvas.drawImage(pinImage, drawOffset, paint);
     }
   }
 }

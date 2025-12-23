@@ -1,9 +1,11 @@
 import 'dart:math';
+import 'dart:ui' as ui;
 
 import 'package:ar_location_viewer/ar_radar.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:native_device_orientation/native_device_orientation.dart';
 
@@ -85,13 +87,26 @@ class ArViewer extends StatefulWidget {
 
 class _ArViewerState extends State<ArViewer> {
   ArStatus arStatus = ArStatus();
+  late ui.Image pinImage;
 
   Position? position;
 
   @override
   void initState() {
+    loadImage('packages/ar_location_viewer/assets/pin.png').then((value) {
+      setState(() {
+        pinImage = value;
+      });
+    });
     ArSensorManager.instance.init();
     super.initState();
+  }
+
+  Future<ui.Image> loadImage(String asset) async {
+    final data = await rootBundle.load(asset);
+    final codec = await ui.instantiateImageCodec(data.buffer.asUint8List());
+    final frame = await codec.getNextFrame();
+    return frame.image;
   }
 
   @override
@@ -165,6 +180,7 @@ class _ArViewerState extends State<ArViewer> {
         heading: heading,
         background: widget.backgroundRadar ?? Colors.grey,
         radarColor: widget.radarColor ?? Colors.blue,
+        pinImage: pinImage,
       ),
     );
     return Positioned(

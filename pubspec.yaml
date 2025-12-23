@@ -35,3 +35,6 @@ flutter:
         pluginClass: ArLocationViewerPlugin
       ios:
         pluginClass: ArLocationViewerPlugin
+  
+  assets:
+    - assets/
